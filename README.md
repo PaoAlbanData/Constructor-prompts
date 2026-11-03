@@ -55,7 +55,7 @@ Si la página se abre como artifact dentro de Claude, aparece además «Traducir
 
 ## Detalles técnicos
 
-- Un único archivo `index.html` con HTML, CSS y JavaScript sin dependencias ni proceso de build. Solo carga fuentes de Google Fonts.
+- Un único archivo `index.html` con HTML, CSS y JavaScript sin dependencias ni proceso de build. Las fuentes (Bricolage Grotesque e IBM Plex, licencia OFL) están alojadas en el propio repositorio, así que la página no hace peticiones a Google Fonts.
 - Lo que escribes se guarda en el `localStorage` de tu navegador y no se envía a ningún servidor.
 - La versión publicada usa el banner de cookies compartido del portfolio: Google Analytics solo mide visitas si la persona lo acepta.
 - Tema claro y oscuro según la configuración del sistema, y diseño adaptado a móvil.
