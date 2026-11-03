@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230d6b5e%27/%3E%3Cpath d=%27M9 11l5 5-5 5M16 22h7%27 stroke=%27white%27 stroke-width=%273%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<title>Constructor de prompts</title>
+<meta name="description" content="Formulario para construir prompts por tipo de tarea y para herramientas de imagen y vídeo.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: cabecera, selector de modo, fila de tareas o herramientas; formulario a la izquierda y bloques de salida a la derecha */
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --fg:#1b2422; --muted:#5d6b67; --line:#d9dfdc;
+  --accent:#0d6b5e; --accent-soft:#e1efeb; --warn-soft:#f6eedb; --warn:#7a5a12; --err:#a23b2a;
+  --code-bg:#1d2826; --code-fg:#e6efec;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121816; --surface:#1a2220; --fg:#e4ece9; --muted:#97a6a1; --line:#2c3835;
+  --accent:#4fc2ad; --accent-soft:#1d332f; --warn-soft:#2e2717; --warn:#e2c37a; --err:#f08a76;
+  --code-bg:#0c1110; --code-fg:#dbe7e3; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121816; --surface:#1a2220; --fg:#e4ece9; --muted:#97a6a1; --line:#2c3835;
+  --accent:#4fc2ad; --accent-soft:#1d332f; --warn-soft:#2e2717; --warn:#e2c37a; --err:#f08a76;
+  --code-bg:#0c1110; --code-fg:#dbe7e3; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header h1{font-family:var(--display);font-size:clamp(26px,5vw,36px);margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:66ch}
+.modes{display:inline-flex;border:1px solid var(--line);border-radius:10px;padding:3px;background:var(--surface);gap:3px;align-self:flex-start;flex-wrap:wrap}
+.mode{font:600 14px var(--body);border:0;background:transparent;color:var(--fg);padding:8px 16px;border-radius:7px;cursor:pointer}
+.mode[aria-selected="true"]{background:var(--accent);color:var(--bg)}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.row-label{font:600 11.5px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-right:4px}
+.chip{font:500 13.5px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--fg);font-weight:600}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:13.5px;background:var(--accent-soft);border-radius:8px;padding:10px 12px;max-width:none}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+form{display:flex;flex-direction:column;gap:14px;min-width:0}
+.group{font:600 11.5px var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--accent);border-top:1px solid var(--line);padding-top:12px;margin-top:4px}
+.group:first-child{border-top:0;padding-top:0;margin-top:0}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-weight:600;font-size:14px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.req{font:500 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.field small{color:var(--muted);font-size:12.5px}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500}
+input[type=text],textarea,select{font:400 14px var(--body);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%}
+textarea{min-height:64px;resize:vertical}
+.out{display:flex;flex-direction:column;gap:14px;min-width:0}
+.out-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.out-head h2{font-family:var(--display);font-size:20px;margin:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button.b{font:600 13px var(--body);border-radius:8px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--fg)}
+button.b.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button.b:disabled{opacity:.55;cursor:default}
+button.sm{padding:5px 10px;font-size:12.5px}
+.block{display:flex;flex-direction:column;gap:6px;min-width:0}
+.block-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.dest{font-weight:600;font-size:14px}
+.dest span{font:500 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-left:6px}
+.note{font-size:12.5px;color:var(--muted)}
+.note.err{color:var(--err)}
+pre{margin:0;background:var(--code-bg);color:var(--code-fg);font:400 13px/1.55 var(--mono);padding:14px;border-radius:10px;white-space:pre-wrap;word-break:break-word;max-height:60vh;overflow:auto}
+.config{background:var(--warn-soft);border-radius:10px;padding:10px 14px;font-size:13.5px}
+.config ul{margin:4px 0 0;padding-left:18px}
+.config strong{color:var(--warn)}
+.ai{border:1px dashed var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.empty{color:var(--muted);font-size:14px;border:1px dashed var(--line);border-radius:10px;padding:16px}
+.meta{font-size:12.5px;color:var(--muted)}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:8px}
+footer a{color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Constructor de prompts</h1>
+    <p>Elige qué quieres pedir, rellena los campos y copia el resultado. Los campos vacíos no aparecen en el texto final, y lo que escribes se guarda en este navegador.</p>
+  </header>
+
+  <div class="modes" role="tablist" id="modes"></div>
+  <div class="row" id="types"></div>
+  <div class="row" id="tools"></div>
+  <div class="hint" id="hint"></div>
+
+  <div class="grid">
+    <form id="form" autocomplete="off"></form>
+    <section class="out" aria-live="polite">
+      <div class="out-head">
+        <h2>Resultado</h2>
+        <div class="btns">
+          <button type="button" class="b" id="example">Cargar ejemplo</button>
+          <button type="button" class="b" id="clear">Vaciar</button>
+        </div>
+      </div>
+      <div class="meta" id="meta"></div>
+      <div id="blocks" class="out"></div>
+    </section>
+  </div>
+
+  <footer>Hecho por Paola Alban · <a href="https://github.com/PaoAlbanData/Constructor-prompts" target="_blank" rel="noopener">Código en GitHub</a></footer>
+</div>
+
+<script>
+/* ---------- utilidades ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const T = s => (s || "").trim();
+const lines = t => (t || "").split("\n").map(s => s.replace(/^\s*(\d+[.)]|[-*•])\s*/, "").trim()).filter(Boolean);
+const sec = pairs => pairs.filter(([, t]) => T(t)).map(([k, t]) => "## " + k + "\n" + T(t)).join("\n\n");
+const tag = (name, t) => T(t) && "<" + name + ">\n" + T(t) + "\n</" + name + ">";
+const lc = s => { s = T(s); return s && s[0].toLowerCase() + s.slice(1); };
+const dot = s => { s = T(s); return s && (/[.!?…»"]$/.test(s) ? s : s + "."); };
+
+/* ---------- tareas de texto ---------- */
+const TASKS = {
+  generico: {
+    label: "Genérico",
+    hint: "Para cualquier petición que no encaje en las demás. Contexto, tarea y formato son lo que más mejora la respuesta.",
+    fields: [
+      {id:"rol", label:"Contexto", help:"Quién eres y la situación.", req:1, ex:"Soy analista de datos en una empresa de logística. Preparo el informe mensual para dirección."},
+      {id:"tarea", label:"Tarea", help:"Qué necesitas, con un verbo claro.", req:1, ex:"Propón 3 indicadores nuevos para medir la calidad del servicio de entrega."},
+      {id:"objetivo", label:"Objetivo", help:"Para qué lo vas a usar.", ex:"Presentarlos al comité y elegir uno para el próximo trimestre."},
+      {id:"material", label:"Material de entrada", help:"Pega los datos o describe lo que adjuntas.", long:1, ex:"Hoy medimos plazo medio de entrega, coste por pedido e incidencias."},
+      {id:"restricciones", label:"Restricciones", help:"Longitud, tono, nivel técnico, qué evitar.", ex:"Lenguaje no técnico. Indicadores que se puedan calcular con los datos que ya tenemos."},
+      {id:"formato", label:"Formato de salida", ex:"Tabla con: indicador, fórmula, por qué importa y dato necesario."},
+      {id:"ejemplo", label:"Ejemplo de resultado", help:"Opcional. Fija muy bien el estilo.", long:1, ex:""}
+    ],
+    build: v => sec([["Contexto", v.rol], ["Tarea", v.tarea], ["Objetivo", v.objetivo], ["Material", tag("datos", v.material)],
+      ["Restricciones", v.restricciones], ["Formato de salida", v.formato], ["Ejemplo", tag("ejemplo", v.ejemplo)]]),
+    tail: "Si falta información importante para hacerlo bien, pregúntame antes de responder."
+  },
+  datos: {
+    label: "Analizar datos",
+    hint: "Lo decisivo es la pregunta de negocio: sin ella, el análisis describe los datos pero no responde a nada.",
+    fields: [
+      {id:"pregunta", label:"Pregunta de negocio", help:"Qué quieres saber o decidir.", req:1, ex:"¿Qué almacenes explican el aumento del coste por pedido en octubre?"},
+      {id:"contexto", label:"Contexto", help:"Empresa, área, por qué surge la pregunta.", ex:"Empresa de logística con 6 almacenes. El coste por pedido subió un 8 % en octubre."},
+      {id:"datos", label:"Qué datos tienes", help:"Origen, periodo, columnas y su significado.", req:1, long:1, ex:"Excel adjunto, enero a octubre de 2026, una fila por almacén y mes.\nColumnas: almacen, mes, pedidos, coste_total, plazo_medio_h, incidencias."},
+      {id:"pegar", label:"Datos pegados", help:"Opcional, si no adjuntas archivo.", long:1, ex:""},
+      {id:"metricas", label:"Métricas o KPIs clave", ex:"Coste por pedido (coste_total / pedidos), plazo medio, tasa de incidencias."},
+      {id:"comparar", label:"Comparaciones o segmentos", ex:"Octubre frente a la media de enero a septiembre, por almacén."},
+      {id:"herramienta", label:"Herramienta", help:"Si quieres el análisis hecho en una herramienta concreta.", ex:"Python con pandas"},
+      {id:"formato", label:"Qué quieres obtener", ex:"Conclusión en 3 frases, tabla por almacén y un gráfico de la evolución mensual."}
+    ],
+    build: v => sec([["Pregunta de negocio", v.pregunta], ["Contexto", v.contexto], ["Datos", v.datos], ["Datos pegados", tag("datos", v.pegar)],
+      ["Métricas clave", v.metricas], ["Comparaciones", v.comparar], ["Herramienta", v.herramienta], ["Resultado esperado", v.formato]]),
+    tail: "Antes de concluir, revisa la calidad de los datos (vacíos, duplicados, valores atípicos) y dime qué supuestos haces. Separa lo que muestran los datos de tus interpretaciones."
+  },
+  linkedin: {
+    label: "Post de LinkedIn",
+    hint: "Un post funciona cuando tiene una sola idea y algo tuyo: una experiencia, un dato o una opinión.",
+    fields: [
+      {id:"tema", label:"Tema", req:1, ex:"Cómo usar IA para revisar KPIs de operaciones"},
+      {id:"idea", label:"Idea principal", help:"La frase que quieres que recuerden.", req:1, ex:"La IA acelera el análisis, pero la pregunta de negocio la tienes que poner tú."},
+      {id:"propio", label:"Experiencia, dato u opinión tuya", long:1, ex:"Esta semana pedí a Claude analizar 10 meses de costes logísticos. Sin una pregunta concreta, me devolvió un resumen genérico. Con ella, encontró el almacén responsable en minutos."},
+      {id:"publico", label:"A quién va dirigido", ex:"Analistas de datos y responsables de operaciones"},
+      {id:"tono", label:"Tono", ex:"Cercano y profesional, sin tecnicismos"},
+      {id:"longitud", label:"Longitud", ex:"Entre 150 y 200 palabras"},
+      {id:"cta", label:"Llamada a la acción", help:"Qué quieres que haga quien lo lea.", ex:"Preguntar cómo lo hacen ellos"},
+      {id:"hashtags", label:"Hashtags", ex:"3, al final"}
+    ],
+    build: v => sec([["Tarea", "Escribe un post de LinkedIn."], ["Tema", v.tema], ["Idea principal", v.idea], ["Mi experiencia o dato", v.propio],
+      ["Público", v.publico], ["Tono", v.tono], ["Longitud", v.longitud], ["Llamada a la acción", v.cta], ["Hashtags", v.hashtags]]),
+    tail: "Escribe en primera persona, con frases cortas y una primera línea que invite a seguir leyendo. Evita frases hechas y el exceso de emojis. Dame dos opciones para la primera línea."
+  },
+  resumen: {
+    label: "Resumir documento",
+    hint: "Un buen resumen depende de para quién es y para qué lo va a usar.",
+    fields: [
+      {id:"doc", label:"Documento", help:"Qué es. Adjúntalo o pégalo abajo.", req:1, ex:"Informe anual de sostenibilidad 2025 de la empresa (PDF adjunto, 80 páginas)."},
+      {id:"texto", label:"Texto pegado", help:"Opcional, si no adjuntas archivo.", long:1, ex:""},
+      {id:"para", label:"Para quién es el resumen", req:1, ex:"El comité de dirección, que no lo va a leer entero."},
+      {id:"uso", label:"Para qué lo usará", ex:"Decidir si renovamos los objetivos de reducción de emisiones."},
+      {id:"priorizar", label:"Qué priorizar", ex:"Objetivos cumplidos y no cumplidos, cifras de emisiones e inversiones previstas."},
+      {id:"ignorar", label:"Qué ignorar", ex:"Casos de éxito y mensajes institucionales."},
+      {id:"longitud", label:"Longitud y formato", ex:"Una página: 5 puntos clave y una tabla de objetivos con su estado."}
+    ],
+    build: v => sec([["Tarea", "Resume el documento."], ["Documento", v.doc], ["Texto", tag("documento", v.texto)], ["Destinatario", v.para],
+      ["Uso del resumen", v.uso], ["Prioriza", v.priorizar], ["Ignora", v.ignorar], ["Longitud y formato", v.longitud]]),
+    tail: "Básate solo en el documento. Cuando cites cifras o conclusiones, indica la sección o la página."
+  },
+  email: {
+    label: "Email",
+    hint: "Lo que más cambia un email es la relación con quien lo recibe y lo que quieres conseguir.",
+    fields: [
+      {id:"para", label:"Destinatario y relación", req:1, ex:"Mi responsable directa. Buena relación, trato de tú."},
+      {id:"objetivo", label:"Qué quieres conseguir", req:1, ex:"Que apruebe dos días de formación en Power BI en diciembre."},
+      {id:"contexto", label:"Antecedentes", long:1, ex:"El equipo va a migrar los informes a Power BI en enero y soy quien más los usa."},
+      {id:"puntos", label:"Puntos que debe incluir", long:1, ex:"Fechas: 11 y 12 de diciembre\nCoste: 450 €, a cargo del presupuesto de formación\nCubro mis tareas con un compañero"},
+      {id:"tono", label:"Tono", ex:"Directo y cordial"},
+      {id:"longitud", label:"Longitud", ex:"Breve, que se lea en el móvil"},
+      {id:"evitar", label:"Qué evitar", ex:"Que suene a que lo doy por hecho."}
+    ],
+    build: v => sec([["Tarea", "Redacta un email."], ["Destinatario", v.para], ["Objetivo", v.objetivo], ["Antecedentes", v.contexto],
+      ["Debe incluir", lines(v.puntos).map(s => "- " + s).join("\n")], ["Tono", v.tono], ["Longitud", v.longitud], ["Evita", v.evitar]]),
+    tail: "Incluye el asunto. Deja clara la petición o el siguiente paso en las primeras líneas."
+  },
+  codigo: {
+    label: "Fórmulas y código",
+    hint: "Da la estructura exacta de tus datos y un ejemplo de lo que esperas: así evitas fórmulas que no encajan.",
+    fields: [
+      {id:"lenguaje", label:"Herramienta o lenguaje", req:1, ex:"DAX en Power BI"},
+      {id:"objetivo", label:"Qué quieres calcular o hacer", req:1, ex:"Una medida con el coste por pedido de los últimos 3 meses, que respete los filtros de almacén."},
+      {id:"estructura", label:"Estructura de los datos", help:"Tablas, columnas, tipos y relaciones.", long:1, ex:"Tabla Pedidos: id_pedido, fecha (fecha), almacen (texto), coste (decimal).\nTabla Calendario relacionada por fecha."},
+      {id:"esperado", label:"Ejemplo de resultado esperado", ex:"Para el almacén Norte en octubre debería salir unos 4,20 €."},
+      {id:"actual", label:"Código actual o error", help:"Si ya tienes algo que no funciona.", long:1, ex:""},
+      {id:"restricciones", label:"Restricciones", ex:"Sin columnas calculadas nuevas."},
+      {id:"explicar", label:"Nivel de explicación", ex:"Explica cada paso, estoy aprendiendo DAX."}
+    ],
+    build: v => sec([["Herramienta", v.lenguaje], ["Objetivo", v.objetivo], ["Estructura de los datos", v.estructura], ["Resultado esperado", v.esperado],
+      ["Código actual o error", tag("codigo", v.actual)], ["Restricciones", v.restricciones], ["Explicación", v.explicar]]),
+    tail: "Señala los casos límite (nulos, duplicados, divisiones por cero) y cómo los trata la solución."
+  },
+  investigar: {
+    label: "Investigar un tema",
+    hint: "Una pregunta concreta y un ámbito claro evitan respuestas generales. Pide siempre fuentes con fecha.",
+    fields: [
+      {id:"pregunta", label:"Pregunta", req:1, ex:"¿Qué hospitales europeos usan ya agentes de IA en la gestión de citas y con qué resultados?"},
+      {id:"para", label:"Para qué lo necesitas", ex:"Preparar una propuesta para un proyecto de HealthTech."},
+      {id:"ambito", label:"Ámbito y periodo", ex:"Europa, de 2024 en adelante."},
+      {id:"profundidad", label:"Profundidad", ex:"Panorama general con 5 a 8 casos concretos."},
+      {id:"fuentes", label:"Fuentes preferidas o a evitar", ex:"Prioriza fuentes oficiales, estudios y prensa especializada. Evita notas de prensa de proveedores."},
+      {id:"formato", label:"Formato", ex:"Tabla de casos (centro, país, uso, resultados, fuente) y 3 conclusiones."}
+    ],
+    build: v => sec([["Pregunta", v.pregunta], ["Para qué", v.para], ["Ámbito y periodo", v.ambito], ["Profundidad", v.profundidad],
+      ["Fuentes", v.fuentes], ["Formato", v.formato]]),
+    tail: "Cita cada fuente con enlace y fecha. Separa los datos confirmados de las opiniones o estimaciones, y dime qué no has podido verificar."
+  },
+  presentacion: {
+    label: "Presentación",
+    hint: "Decide primero el mensaje que el público debe llevarse. La estructura se construye a partir de él.",
+    fields: [
+      {id:"tema", label:"Tema", req:1, ex:"Resultados del piloto de automatización de informes"},
+      {id:"publico", label:"Público", req:1, ex:"Dirección general, 15 minutos en el comité mensual."},
+      {id:"mensaje", label:"Mensaje clave", ex:"El piloto ahorra 12 horas al mes y proponemos extenderlo a 3 áreas."},
+      {id:"diapos", label:"Número de diapositivas", ex:"8 a 10"},
+      {id:"datos", label:"Datos que debe incluir", long:1, ex:"Horas ahorradas por mes, errores antes y después, coste del piloto."},
+      {id:"estilo", label:"Estilo", ex:"Sobrio, una idea por diapositiva, muchos gráficos y poco texto."}
+    ],
+    build: v => sec([["Tarea", "Prepara la estructura y el contenido de una presentación."], ["Tema", v.tema], ["Público", v.publico],
+      ["Mensaje clave", v.mensaje], ["Número de diapositivas", v.diapos], ["Datos a incluir", v.datos], ["Estilo", v.estilo]]),
+    tail: "Para cada diapositiva dame: un título que exprese la conclusión, el contenido y el gráfico o visual que propones."
+  },
+  revisar: {
+    label: "Revisar texto",
+    hint: "Di qué quieres mejorar y qué no se debe tocar. Si no, el texto vuelve reescrito por completo.",
+    fields: [
+      {id:"texto", label:"Texto", req:1, long:1, ex:"Pega aquí tu texto."},
+      {id:"tipo", label:"Qué es y para quién", ex:"Resumen de mi perfil para LinkedIn, para reclutadores de datos."},
+      {id:"mejorar", label:"Qué mejorar", req:1, ex:"Claridad y concisión. Que se entienda en 10 segundos qué hago."},
+      {id:"mantener", label:"Qué no tocar", ex:"Los datos y logros concretos."},
+      {id:"tono", label:"Tono deseado", ex:"Profesional y cercano"},
+      {id:"devolver", label:"Cómo devolverlo", ex:"Texto corregido y, debajo, los cambios principales."}
+    ],
+    build: v => sec([["Tarea", "Revisa y mejora este texto."], ["Texto", tag("texto", v.texto)], ["Qué es", v.tipo], ["Qué mejorar", v.mejorar],
+      ["No cambies", v.mantener], ["Tono", v.tono], ["Cómo devolverlo", v.devolver]]),
+    tail: "Explica brevemente el porqué de los cambios principales."
+  },
+  ideas: {
+    label: "Lluvia de ideas",
+    hint: "Las restricciones y el criterio de priorización convierten una lista larga en ideas utilizables.",
+    fields: [
+      {id:"reto", label:"Problema o reto", req:1, ex:"Reducir las incidencias en la preparación de pedidos."},
+      {id:"contexto", label:"Contexto", ex:"Almacén de 40 personas, picking manual, 3 % de pedidos con error."},
+      {id:"restricciones", label:"Restricciones", ex:"Presupuesto bajo, resultados en menos de 3 meses."},
+      {id:"descartadas", label:"Ideas ya probadas o descartadas", ex:"Formación general al personal."},
+      {id:"cuantas", label:"Cuántas ideas", ex:"10"},
+      {id:"criterio", label:"Criterio para priorizar", ex:"Impacto esperado frente a facilidad de implantación."}
+    ],
+    build: v => sec([["Reto", v.reto], ["Contexto", v.contexto], ["Restricciones", v.restricciones], ["Ya probado o descartado", v.descartadas],
+      ["Número de ideas", v.cuantas], ["Criterio de priorización", v.criterio]]),
+    tail: "Incluye ideas evidentes y alguna más arriesgada. Al final, ordénalas según el criterio y justifica cada posición en una línea."
+  }
+};
+
+/* ---------- imagen y vídeo ---------- */
+const RATIOS = ["", "1:1", "4:5", "3:2", "2:3", "16:9", "9:16"];
+const TOOLS = {
+  imagen: {
+    label: "Imagen",
+    list: {
+      midjourney: {label:"Midjourney", style:"tags", params:1,
+        tip:"Frases cortas separadas por comas, con lo más importante al principio. Los parámetros van siempre al final del prompt."},
+      chatgpt: {label:"ChatGPT", style:"natural",
+        tip:"Frases completas y concretas. Pon entre comillas el texto que deba aparecer. Después puedes pedir cambios en la misma conversación."},
+      gemini: {label:"Gemini", style:"natural",
+        tip:"Describe la escena en frases completas, como si se la explicaras a un fotógrafo. Puedes pedir cambios después en la misma conversación."},
+      firefly: {label:"Adobe Firefly", style:"natural", ui:1,
+        tip:"Descripción clara en frases. La proporción, el tipo de contenido (foto o arte) y el estilo se eligen en la interfaz."},
+      ideogram: {label:"Ideogram", style:"natural", ui:1,
+        tip:"La mejor opción si la imagen lleva texto: escríbelo entre comillas y di dónde va. La proporción se elige en la interfaz."},
+      sd: {label:"Stable Diffusion", style:"tags", negative:1, ui:1,
+        tip:"Palabras clave separadas por comas, de más a menos importantes. Lo que no quieres va en el prompt negativo, en su propio campo."}
+    },
+    fields: [
+      {g:"Qué se ve"},
+      {id:"sujeto", label:"Sujeto", help:"Qué o quién aparece.", req:1, ex:"Una analista de datos de unos 30 años"},
+      {id:"accion", label:"Acción o pose", ex:"revisando un dashboard en una pantalla grande"},
+      {id:"entorno", label:"Entorno", ex:"en una oficina luminosa con plantas"},
+      {id:"detalles", label:"Detalles", ex:"gráficos de líneas en tonos verdes en la pantalla"},
+      {id:"texto", label:"Texto en la imagen", help:"Solo si debe aparecer texto escrito.", ex:""},
+      {g:"Cómo se ve"},
+      {id:"estilo", label:"Estilo", help:"Fotografía, ilustración, 3D, acuarela, flat design…", ex:"fotografía editorial"},
+      {id:"luz", label:"Luz", ex:"luz natural de mañana, suave"},
+      {id:"colores", label:"Colores y ambiente", ex:"tonos verdes y blancos, ambiente tranquilo"},
+      {id:"encuadre", label:"Encuadre", help:"Plano general, medio, primer plano, cenital…", ex:"plano medio, ligeramente lateral"},
+      {id:"ratio", label:"Proporción", type:"select", options:RATIOS, ex:"16:9"},
+      {id:"evitar", label:"Qué evitar", ex:"texto ilegible, manos deformes"},
+      {g:"Ajustes de Midjourney", only:"midjourney"},
+      {id:"stylize", label:"Stylize (0 a 1000)", help:"Cuánto aplica su estética propia. Por defecto 100.", only:"midjourney", ex:"150"},
+      {id:"raw", label:"Estilo raw (más literal, menos estetizado)", type:"check", only:"midjourney"}
+    ]
+  },
+  video: {
+    label: "Vídeo",
+    list: {
+      runway: {label:"Runway", fromImage:1, noNegatives:1, ui:1,
+        tip:"Si partes de una imagen, describe solo el movimiento: la imagen ya aporta sujeto, estilo y luz. Escribe en positivo y limita cada generación a un plano y una acción."},
+      veo: {label:"Google Veo", audio:1, ui:1,
+        tip:"Describe plano, acción, cámara y ambiente. Veo genera sonido: indica el ambiente, los efectos y el diálogo entre comillas, con quién lo dice."},
+      sora: {label:"Sora", audio:1, ui:1,
+        tip:"Describe la escena como un plano de cine: encuadre, acción, movimiento de cámara y luz. Puede generar sonido y diálogo."},
+      kling: {label:"Kling", negative:1, ui:1,
+        tip:"Frases claras con sujeto, acción, cámara y ambiente. Lo que quieras evitar va en el campo de prompt negativo."}
+    },
+    fields: [
+      {g:"Escena"},
+      {id:"origen", label:"Punto de partida", type:"select", options:["Solo texto", "Una imagen que subo"], ex:"Solo texto"},
+      {id:"sujeto", label:"Sujeto", help:"Si partes de una imagen, puedes dejarlo vacío.", ex:"Una mujer con abrigo rojo"},
+      {id:"accion", label:"Qué ocurre", help:"Una acción principal por plano.", req:1, ex:"camina despacio entre los puestos y se detiene a oler unas flores"},
+      {id:"entorno", label:"Entorno", ex:"un mercado al aire libre en una ciudad mediterránea"},
+      {g:"Cámara y estilo"},
+      {id:"plano", label:"Plano", type:"select", options:["", "plano general", "plano medio", "primer plano", "plano detalle", "vista aérea"], ex:"plano medio"},
+      {id:"camara", label:"Movimiento de cámara", type:"select", options:["", "cámara fija", "travelling que la sigue", "acercamiento lento", "alejamiento lento", "paneo lateral", "órbita alrededor del sujeto", "cámara en mano", "dron"], ex:"travelling que la sigue"},
+      {id:"estilo", label:"Estilo", help:"Cinematográfico, documental, animación…", ex:"cinematográfico, cálido"},
+      {id:"luz", label:"Luz y ambiente", ex:"atardecer, luz dorada"},
+      {g:"Sonido", onlyIf:"audio"},
+      {id:"sonido", label:"Ambiente y efectos", onlyIf:"audio", ex:"murmullo del mercado, pasos sobre adoquines"},
+      {id:"dialogo", label:"Diálogo", help:"Quién lo dice y qué dice.", onlyIf:"audio", ex:"La mujer dice: «Huelen a verano»."},
+      {g:"Formato"},
+      {id:"duracion", label:"Duración", type:"select", options:["", "5 segundos", "8 segundos", "10 segundos"], ex:"8 segundos"},
+      {id:"ratio", label:"Proporción", type:"select", options:["", "16:9", "9:16", "1:1"], ex:"16:9"},
+      {id:"evitar", label:"Qué evitar", ex:"cortes bruscos, texto en pantalla"}
+    ]
+  }
+};
+
+function buildCreative(kind, toolId, v) {
+  const tool = TOOLS[kind].list[toolId], out = [], config = [];
+  let prompt = "", negative = "";
+  if (kind === "imagen") {
+    const parts = [v.estilo && (tool.style === "natural" ? T(v.estilo) + " de " + lc(v.sujeto) : T(v.estilo)),
+      !(v.estilo && tool.style === "natural") && T(v.sujeto), T(v.accion), T(v.entorno), T(v.detalles)].filter(Boolean);
+    if (tool.style === "natural") {
+      const s = [];
+      if (parts.length) s.push(dot(parts.join(", ").replace(/^./, c => c.toUpperCase())));
+      if (T(v.encuadre)) s.push("Encuadre: " + dot(v.encuadre));
+      if (T(v.luz)) s.push("Luz: " + dot(v.luz));
+      if (T(v.colores)) s.push("Colores y ambiente: " + dot(v.colores));
+      if (T(v.texto)) s.push('Incluye el texto "' + T(v.texto).replace(/^["«]|["»]$/g, "") + '".');
+      if (v.ratio && !tool.ui) s.push("Formato " + v.ratio + ".");
+      if (T(v.evitar)) s.push("Evita: " + dot(v.evitar));
+      prompt = s.join(" ");
+    } else {
+      const tags = [T(v.sujeto), T(v.accion), T(v.entorno), T(v.estilo), T(v.luz), T(v.colores), T(v.encuadre), T(v.detalles),
+        T(v.texto) && 'texto "' + T(v.texto).replace(/^["«]|["»]$/g, "") + '"'].filter(Boolean);
+      prompt = tags.join(", ");
+      if (tool.params) {
+        const p = [];
+        if (v.ratio) p.push("--ar " + v.ratio);
+        if (T(v.stylize)) p.push("--s " + T(v.stylize).replace(/\D/g, ""));
+        if (v.raw) p.push("--style raw");
+        if (T(v.evitar)) p.push("--no " + T(v.evitar));
+        if (p.length) prompt += (prompt ? " " : "") + p.join(" ");
+      }
+      if (tool.negative) negative = T(v.evitar);
+    }
+    if (tool.ui && v.ratio) config.push("Elige la proporción <strong>" + esc(v.ratio) + "</strong> en la interfaz");
+  } else {
+    const fromImg = v.origen === "Una imagen que subo";
+    const s = [];
+    const shot = [v.plano, v.camara].filter(Boolean).join(", ");
+    if (fromImg && tool.fromImage) {
+      if (T(v.accion)) s.push(dot((T(v.sujeto) ? T(v.sujeto) + " " : "El sujeto ") + lc(v.accion)));
+      if (v.camara) s.push(dot(v.camara.replace(/^./, c => c.toUpperCase())));
+      if (T(v.estilo)) s.push("Estilo " + dot(v.estilo));
+    } else {
+      if (shot) s.push(dot(shot.replace(/^./, c => c.toUpperCase())));
+      const scene = [T(v.sujeto), lc(v.accion)].filter(Boolean).join(" ");
+      if (scene) s.push(dot((scene + (T(v.entorno) ? ", en " + lc(v.entorno).replace(/^en /, "") : "")).replace(/^./, c => c.toUpperCase())));
+      if (T(v.estilo)) s.push("Estilo " + dot(v.estilo));
+      if (T(v.luz)) s.push("Luz y ambiente: " + dot(v.luz));
+    }
+    if (tool.audio) {
+      if (T(v.sonido)) s.push("Sonido: " + dot(v.sonido));
+      if (T(v.dialogo)) s.push(dot(v.dialogo));
+    }
+    if (T(v.evitar) && !tool.negative && !tool.noNegatives) s.push("Evita: " + dot(v.evitar));
+    prompt = s.join(" ");
+    if (tool.negative) negative = T(v.evitar);
+    if (fromImg) config.push("Sube la imagen de partida como primer fotograma");
+    if (v.duracion) config.push("Elige la duración <strong>" + esc(v.duracion) + "</strong>");
+    if (v.ratio) config.push("Elige la proporción <strong>" + esc(v.ratio) + "</strong>");
+    if (tool.noNegatives && T(v.evitar)) out.note = "Runway funciona peor con instrucciones negativas, así que «Qué evitar» no se ha incluido. Describe en positivo lo que sí quieres.";
+  }
+  out.prompt = prompt; out.negative = negative; out.config = config;
+  return out;
+}
+
+/* ---------- estado ---------- */
+const KEY = "constructor-prompts-v2";
+let state = {mode:"texto", task:"generico", kind:"imagen", tool:{imagen:"midjourney", video:"veo"}, values:{}};
+try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.values) state = Object.assign(state, s); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
+const storeKey = () => state.mode === "texto" ? "t-" + state.task : "c-" + state.kind;
+const vals = () => state.values[storeKey()] ||= {};
+const curTool = () => TOOLS[state.kind].list[state.tool[state.kind]];
+function visibleFields() {
+  if (state.mode === "texto") return TASKS[state.task].fields;
+  const tool = curTool(), id = state.tool[state.kind];
+  return TOOLS[state.kind].fields.filter(f => (!f.only || f.only === id) && (!f.onlyIf || tool[f.onlyIf]));
+}
+
+/* ---------- Claude (solo dentro de Claude) ---------- */
+let sample = null, sampleChecked = false;
+if (window.claude && typeof window.claude.use === "function") {
+  window.claude.use("sample").then(s => { sample = s; sampleChecked = true; if (state.mode === "creativo") renderOut(); })
+    .catch(() => { sampleChecked = true; });
+} else sampleChecked = true;
+let aiResult = null, aiBusy = false, aiError = "";
+
+/* ---------- render ---------- */
+function chip(label, pressed, onClick) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = label; b.setAttribute("aria-pressed", pressed); b.onclick = onClick;
+  return b;
+}
+function renderNav() {
+  const modes = $("modes"); modes.innerHTML = "";
+  [["texto", "Tareas de texto"], ["creativo", "Imagen y vídeo"]].forEach(([k, l]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "mode"; b.setAttribute("role", "tab"); b.textContent = l; b.setAttribute("aria-selected", state.mode === k);
+    b.onclick = () => { state.mode = k; aiResult = null; aiError = ""; save(); render(); };
+    modes.appendChild(b);
+  });
+  const types = $("types"), tools = $("tools"); types.innerHTML = ""; tools.innerHTML = "";
+  if (state.mode === "texto") {
+    tools.hidden = true;
+    for (const [k, t] of Object.entries(TASKS)) types.appendChild(chip(t.label, k === state.task, () => { state.task = k; save(); render(); }));
+    $("hint").textContent = TASKS[state.task].hint;
+  } else {
+    tools.hidden = false;
+    const l = document.createElement("span"); l.className = "row-label"; l.textContent = "Tipo"; types.appendChild(l);
+    for (const [k, t] of Object.entries(TOOLS)) types.appendChild(chip(t.label, k === state.kind, () => { state.kind = k; aiResult = null; aiError = ""; save(); render(); }));
+    const l2 = document.createElement("span"); l2.className = "row-label"; l2.textContent = "Herramienta"; tools.appendChild(l2);
+    for (const [k, t] of Object.entries(TOOLS[state.kind].list)) tools.appendChild(chip(t.label, k === state.tool[state.kind], () => { state.tool[state.kind] = k; aiResult = null; aiError = ""; save(); render(); }));
+    $("hint").textContent = curTool().tip;
+  }
+}
+function renderForm() {
+  const v = vals(); const form = $("form"); form.innerHTML = "";
+  visibleFields().forEach(f => {
+    if (f.g) { const h = document.createElement("div"); h.className = "group"; h.textContent = f.g; form.appendChild(h); return; }
+    const id = storeKey() + "-" + f.id;
+    const wrap = document.createElement("div"); wrap.className = "field";
+    if (f.type === "check") {
+      wrap.innerHTML = '<label class="check"><input type="checkbox" id="' + id + '"> ' + esc(f.label) + '</label>';
+      const el = wrap.querySelector("input"); el.checked = !!v[f.id];
+      el.addEventListener("change", () => { v[f.id] = el.checked; aiResult = null; save(); renderOut(); });
+      form.appendChild(wrap); return;
+    }
+    wrap.innerHTML = '<label for="' + id + '">' + esc(f.label) + (f.req ? ' <span class="req">clave</span>' : '') + '</label>' + (f.help ? '<small>' + esc(f.help) + '</small>' : '');
+    let el;
+    if (f.type === "select") {
+      el = document.createElement("select");
+      f.options.forEach(o => { const op = document.createElement("option"); op.value = o; op.textContent = o || "Sin indicar"; el.appendChild(op); });
+    } else {
+      el = document.createElement(f.long ? "textarea" : "input");
+      if (!f.long) el.type = "text"; else el.rows = 3;
+      el.placeholder = f.ex || "";
+    }
+    el.id = id; el.value = v[f.id] || (f.type === "select" ? f.options[0] : "");
+    el.addEventListener(f.type === "select" ? "change" : "input", () => { v[f.id] = el.value; aiResult = null; save(); renderOut(); });
+    wrap.appendChild(el); form.appendChild(wrap);
+  });
+}
+function copy(btn, text, pre) {
+  const done = m => { btn.textContent = m; setTimeout(() => btn.textContent = btn.dataset.label, 1800); };
+  const fallback = () => { if (pre) { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } done("Selecciona y copia"); };
+  try { navigator.clipboard.writeText(text).then(() => done("Copiado"), fallback); } catch (e) { fallback(); }
+}
+function codeBlock(dest, tagLabel, text, note) {
+  const d = document.createElement("div"); d.className = "block";
+  const head = document.createElement("div"); head.className = "block-head";
+  head.innerHTML = '<div class="dest">' + esc(dest) + (tagLabel ? '<span>' + esc(tagLabel) + '</span>' : '') + '</div>';
+  const pre = document.createElement("pre"); pre.tabIndex = 0; pre.textContent = text;
+  const b = document.createElement("button"); b.type = "button"; b.className = "b sm"; b.textContent = b.dataset.label = "Copiar";
+  b.onclick = () => copy(b, text, pre);
+  head.appendChild(b); d.append(head, pre);
+  if (note) { const n = document.createElement("div"); n.className = "note"; n.textContent = note; d.appendChild(n); }
+  return d;
+}
+function configBlock(items) {
+  const d = document.createElement("div"); d.className = "block";
+  d.innerHTML = '<div class="dest">En la herramienta<span>ajustar a mano</span></div><div class="config"><ul>' + items.map(i => "<li>" + i + "</li>").join("") + "</ul></div>";
+  return d;
+}
+function instructionFor(toolLabel, tip, prompt, negative) {
+  return "Traduce al inglés y adapta este prompt para " + toolLabel + ". Sigue sus buenas prácticas: " + tip +
+    " Conserva todos los elementos y no añadas otros nuevos." + (negative ? " Traduce también el prompt negativo." : "") +
+    "\n\nPROMPT:\n" + prompt + (negative ? "\n\nPROMPT NEGATIVO:\n" + negative : "");
+}
+async function runAI(toolLabel, tip, prompt, negative) {
+  aiBusy = true; aiError = ""; renderOut();
+  try {
+    const input = instructionFor(toolLabel, tip, prompt, negative) +
+      '\n\nResponde solo con JSON: {"prompt": "...", "negative": "..."} (negative vacío si no hay). Los parámetros que empiezan por -- se quedan igual, al final del prompt.';
+    const r = await sample.json(input, {modelTier:"quick"});
+    aiResult = {prompt: T(r && r.prompt), negative: T(r && r.negative)};
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "not_granted") { sample = null; aiError = "No se ha dado permiso para usar Claude. Puedes usar «Copiar con instrucción» y pegarlo en cualquier chat."; }
+    else if (code === "rate_limited") aiError = "Demasiadas peticiones seguidas. Espera un momento y vuelve a pulsar.";
+    else aiError = "No se ha podido traducir ahora. Usa «Copiar con instrucción» y pégalo en cualquier chat.";
+  } finally { aiBusy = false; renderOut(); }
+}
+function renderOut() {
+  const v = vals(), fs = visibleFields().filter(f => f.id && f.type !== "check");
+  const filled = fs.filter(f => T(v[f.id]) && !(f.type === "select" && v[f.id] === f.options[0])).length;
+  const missing = fs.filter(f => f.req && !T(v[f.id])).map(f => f.label);
+  $("meta").textContent = filled ? (filled + " de " + fs.length + " campos rellenos" + (missing.length ? " · Falta: " + missing.join(", ") : " · Campos clave completos")) : "";
+  const blocks = $("blocks"); blocks.innerHTML = "";
+  if (!filled) {
+    blocks.innerHTML = '<div class="empty">Rellena los campos y aquí aparecerá el prompt listo para copiar. El texto gris de cada campo es un ejemplo; pulsa «Cargar ejemplo» para verlo completo.</div>';
+    return;
+  }
+  if (state.mode === "texto") {
+    const t = TASKS[state.task], body = t.build(v);
+    blocks.appendChild(codeBlock("Prompt", "pegar en el chat", body + (body ? "\n\n" : "") + t.tail,
+      "La última línea es una instrucción de buenas prácticas para esta tarea. Puedes borrarla si no la necesitas."));
+    return;
+  }
+  const toolId = state.tool[state.kind], tool = curTool(), r = buildCreative(state.kind, toolId, v);
+  blocks.appendChild(codeBlock("Prompt", tool.label + " · en español", r.prompt || "Completa los campos clave.", r.note));
+  if (r.negative) blocks.appendChild(codeBlock("Prompt negativo", "su propio campo", r.negative));
+  if (r.config.length) blocks.appendChild(configBlock(r.config));
+
+  const ai = document.createElement("div"); ai.className = "ai";
+  ai.innerHTML = '<div class="dest">Versión en inglés<span>funciona mejor en estas herramientas</span></div>';
+  const btns = document.createElement("div"); btns.className = "btns";
+  if (sample) {
+    const go = document.createElement("button"); go.type = "button"; go.className = "b primary";
+    go.textContent = aiBusy ? "Traduciendo…" : "Traducir y adaptar con Claude"; go.disabled = aiBusy || !r.prompt;
+    go.onclick = () => runAI(tool.label, tool.tip, r.prompt, r.negative);
+    btns.appendChild(go);
+  }
+  const ci = document.createElement("button"); ci.type = "button"; ci.className = "b"; ci.textContent = ci.dataset.label = "Copiar con instrucción";
+  ci.disabled = !r.prompt; ci.onclick = () => copy(ci, instructionFor(tool.label, tool.tip, r.prompt, r.negative));
+  btns.appendChild(ci); ai.appendChild(btns);
+  const n = document.createElement("div"); n.className = "note" + (aiError ? " err" : "");
+  n.textContent = aiError || (sample
+    ? "Usa tu cuenta de Claude: la primera vez te pedirá permiso. Solo gasta cuando pulsas."
+    : "«Copiar con instrucción» copia el prompt con la orden de traducirlo y adaptarlo. Pégalo en cualquier chat de IA.");
+  ai.appendChild(n);
+  if (aiResult && aiResult.prompt) ai.appendChild(codeBlock("Prompt en inglés", tool.label, aiResult.prompt));
+  if (aiResult && aiResult.negative) ai.appendChild(codeBlock("Prompt negativo en inglés", "", aiResult.negative));
+  blocks.appendChild(ai);
+}
+function render() { renderNav(); renderForm(); renderOut(); }
+
+$("example").onclick = () => {
+  const v = vals();
+  visibleFields().forEach(f => { if (f.id && f.ex) v[f.id] = f.ex; });
+  aiResult = null; save(); renderForm(); renderOut();
+};
+let armed = false;
+$("clear").onclick = () => {
+  const b = $("clear");
+  if (!armed) { armed = true; b.textContent = "¿Seguro? Pulsa otra vez"; setTimeout(() => { armed = false; b.textContent = "Vaciar"; }, 3000); return; }
+  armed = false; b.textContent = "Vaciar"; state.values[storeKey()] = {}; aiResult = null; save(); renderForm(); renderOut();
+};
+render();
+</script>
+</body>
+</html>
